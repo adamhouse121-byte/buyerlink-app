@@ -1,0 +1,18 @@
+-- minimal schema + RPC (same as earlier, compacted)
+create extension if not exists pgcrypto;
+create table if not exists public.agents(id uuid primary key references auth.users(id) on delete cascade,created_at timestamptz default now(),display_name text not null,email text not null,plan text not null default 'free' check (plan in ('free','pro','team')),submissions_this_period int not null default 0,period_start timestamptz default date_trunc('month', now()),brand_color text default '#2E5BFF',logo_url text,subdomain text unique,stripe_customer_id text,stripe_subscription_id text);
+create table if not exists public.forms(id uuid primary key default gen_random_uuid(),agent_id uuid not null references public.agents(id) on delete cascade,name text not null,schema_json jsonb not null default '{}'::jsonb,is_public boolean not null default true,created_at timestamptz default now());
+create index if not exists forms_agent_idx on public.forms(agent_id);
+create table if not exists public.responses(id uuid primary key default gen_random_uuid(),form_id uuid not null references public.forms(id) on delete cascade,created_at timestamptz default now(),answers_json jsonb not null,tags_json jsonb,summary_text text,match_score int,buyer_email text,buyer_name text);
+create index if not exists responses_form_idx on public.responses(form_id,created_at);
+alter table public.agents enable row level security;alter table public.forms enable row level security;alter table public.responses enable row level security;
+drop policy if exists agents_self on public.agents;
+create policy agents_self on public.agents for select using (auth.uid() = id) with check (auth.uid() = id);
+drop policy if exists forms_read_own on public.forms;
+create policy forms_read_own on public.forms for select using (agent_id = auth.uid()) with check (agent_id = auth.uid());
+drop policy if exists responses_read_own on public.responses;
+create policy responses_read_own on public.responses for select using (exists(select 1 from public.forms f where f.id = responses.form_id and f.agent_id = auth.uid())) with check (exists(select 1 from public.forms f where f.id = responses.form_id and f.agent_id = auth.uid()));
+revoke insert on public.responses from anon, authenticated;
+create or replace view public.agent_limits as select id as agent_id,plan,case when plan='free' then 50 when plan='pro' then 1000 else 5000 end as monthly_limit from public.agents;
+create or replace function public.submit_response(p_form_id uuid,p_answers jsonb,p_buyer_name text default null,p_buyer_email text default null) returns uuid language plpgsql security definer as $$ declare v_agent uuid;v_resp uuid;v_limit int;v_used int;begin select f.agent_id into v_agent from public.forms f where f.id=p_form_id and f.is_public=true; if v_agent is null then raise exception 'Form not found or not public'; end if; select monthly_limit into v_limit from public.agent_limits where agent_id=v_agent; select submissions_this_period into v_used from public.agents where id=v_agent; if v_used>=v_limit then raise exception 'Monthly limit reached'; end if; insert into public.responses(form_id,answers_json,buyer_name,buyer_email) values(p_form_id,p_answers,p_buyer_name,p_buyer_email) returning id into v_resp; update public.agents set submissions_this_period=submissions_this_period+1 where id=v_agent; return v_resp; end; $$;
+grant execute on function public.submit_response(uuid,jsonb,text,text) to anon;

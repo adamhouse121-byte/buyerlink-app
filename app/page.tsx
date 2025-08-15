@@ -1,0 +1,1 @@
+export default function P(){return(<main><h1>Buyer Preference Link — Starter</h1><p>Open /form/&lt;formId&gt; to test.</p></main>);}

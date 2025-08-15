@@ -1,0 +1,1 @@
+export const metadata={title:'Buyer Preference Link'};export default function R({children}:{children:React.ReactNode}){return(<html lang='en'><body><div style={{maxWidth:860,margin:'0 auto',padding:24}}>{children}</div></body></html>);}
