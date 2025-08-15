@@ -19,5 +19,11 @@ export default async function Settings({
     .eq("agent_id", agentId)
     .order("created_at", { ascending: true });
 
-  return <SettingsClient agent={agent || null} forms={forms || []} />;
+  return (
+    <SettingsClient
+      agentId={agentId}
+      agent={agent || null}
+      forms={forms || []}
+    />
+  );
 }
