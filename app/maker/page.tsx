@@ -17,7 +17,14 @@ export default function Maker() {
     const r = await fetch("/api/maker", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: pwd, email, display_name: name, plan, brand_color: color, logo_url: logo }),
+      body: JSON.stringify({
+        password: pwd,
+        email,
+        display_name: name,
+        plan,
+        brand_color: color,
+        logo_url: logo,
+      }),
     });
     const j = await r.json();
     if (!r.ok) setErr(j.error || "Failed");
@@ -33,7 +40,8 @@ export default function Maker() {
         <label>Agent display name<br/><input value={name} onChange={e=>setName(e.target.value)} required/></label><br/>
         <label>Plan<br/>
           <select value={plan} onChange={e=>setPlan(e.target.value)}>
-            <option value="free">free</option><option value="pro">pro</option>
+            <option value="free">free</option>
+            <option value="pro">pro</option>
           </select>
         </label><br/>
         <label>Brand color (hex)<br/><input value={color} onChange={e=>setColor(e.target.value)}/></label><br/>
