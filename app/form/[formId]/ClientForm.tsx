@@ -11,28 +11,28 @@ const inp: React.CSSProperties = {
   borderRadius: 8,
 };
 
-const pillStyle = (active: boolean): React.CSSProperties => ({
+const pillStyle = (active: boolean, accent: string): React.CSSProperties => ({
   padding: "8px 12px",
-  borderRadius: 8,
-  border: active ? "2px solid #2563eb" : "1px solid #d1d5db",
-  background: active ? "#eff6ff" : "#fff",
+  borderRadius: 999,
+  border: active ? `2px solid ${accent}` : "1px solid #d1d5db",
+  background: "#fff",
   color: "#111",
   fontSize: 14,
   cursor: "pointer",
 });
 
-const tileStyle = (active: boolean): React.CSSProperties => ({
+const tileStyle = (active: boolean, accent: string): React.CSSProperties => ({
   padding: 14,
   textAlign: "center",
   borderRadius: 12,
-  border: active ? "2px solid #2563eb" : "1px solid #e5e7eb",
-  background: active ? "#eff6ff" : "#fff",
+  border: active ? `2px solid ${accent}` : "1px solid #e5e7eb",
+  background: "#fff",
   cursor: "pointer",
 });
 
-function BedsPicker({ onChange }: { onChange: (v: string) => void }) {
-  const labels = ["Studio", "1", "2", "3", "4", "5+"] as const;
-  const [start, setStart] = useState<number | null>(null);
+function BedsPicker({ onChange, accent }: { onChange: (v: string) => void; accent: string }) {
+  const labels = ["Any", "Studio", "1", "2", "3", "4", "5+"] as const;
+  const [start, setStart] = useState<number | null>(0); // default Any selected
   const [end, setEnd] = useState<number | null>(null);
   const [val, setVal] = useState<string>("Any");
 
@@ -44,20 +44,21 @@ function BedsPicker({ onChange }: { onChange: (v: string) => void }) {
       const b = Math.max(s, e);
       const L = labels[a];
       const R = labels[b];
-      v = a === b ? L : `${L}–${R}`;
+      v = a === b ? (typeof L === "string" ? L : String(L)) : `${L}–${R}`;
     }
     setVal(v);
     onChange(v);
   };
 
-  const clickAny = () => {
-    setStart(null);
-    setEnd(null);
-    commit(null, null);
-  };
-
   const clickIdx = (i: number) => {
-    if (start === null) {
+    // index 0 is "Any" — reset when tapped
+    if (i === 0) {
+      setStart(0);
+      setEnd(null);
+      commit(0, null);
+      return;
+    }
+    if (start === null || start === 0) {
       setStart(i);
       setEnd(null);
       commit(i, null);
@@ -73,7 +74,8 @@ function BedsPicker({ onChange }: { onChange: (v: string) => void }) {
 
   const isActive = (i: number) =>
     (start !== null && end === null && i === start) ||
-    (start !== null && end !== null && i >= Math.min(start, end) && i <= Math.max(start, end));
+    (start !== null && end !== null && i >= Math.min(start, end) && i <= Math.max(start, end)) ||
+    (i === 0 && start === 0 && end === null);
 
   return (
     <div>
@@ -82,11 +84,14 @@ function BedsPicker({ onChange }: { onChange: (v: string) => void }) {
         <small style={{ opacity: 0.7 }}>Tap two numbers to select a range</small>
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button type="button" onClick={clickAny} aria-pressed={val === "Any"} style={pillStyle(val === "Any")}>
-          Any
-        </button>
         {labels.map((label, i) => (
-          <button key={label} type="button" onClick={() => clickIdx(i)} aria-pressed={isActive(i)} style={pillStyle(isActive(i))}>
+          <button
+            key={label}
+            type="button"
+            onClick={() => clickIdx(i)}
+            aria-pressed={isActive(i)}
+            style={pillStyle(isActive(i), accent)}
+          >
             {label}
           </button>
         ))}
@@ -96,7 +101,7 @@ function BedsPicker({ onChange }: { onChange: (v: string) => void }) {
   );
 }
 
-function BathsPicker({ onChange }: { onChange: (v: string) => void }) {
+function BathsPicker({ onChange, accent }: { onChange: (v: string) => void; accent: string }) {
   const opts = ["Any", "1+", "1.5+", "2+", "2.5+", "3+", "4+"] as const;
   const [val, setVal] = useState<string>("Any");
   return (
@@ -106,7 +111,16 @@ function BathsPicker({ onChange }: { onChange: (v: string) => void }) {
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {opts.map((o) => (
-          <button key={o} type="button" onClick={() => { setVal(o); onChange(o); }} aria-pressed={val === o} style={pillStyle(val === o)}>
+          <button
+            key={o}
+            type="button"
+            onClick={() => {
+              setVal(o);
+              onChange(o);
+            }}
+            aria-pressed={val === o}
+            style={pillStyle(val === o, accent)}
+          >
             {o}
           </button>
         ))}
@@ -116,7 +130,13 @@ function BathsPicker({ onChange }: { onChange: (v: string) => void }) {
   );
 }
 
-function HomeTypePicker({ onChange }: { onChange: (keys: string[]) => void }) {
+function HomeTypePicker({
+  onChange,
+  accent,
+}: {
+  onChange: (keys: string[]) => void;
+  accent: string;
+}) {
   const options = [
     { key: "house", label: "House", icon: "🏠" },
     { key: "townhouse", label: "Townhouse", icon: "🏘️" },
@@ -150,7 +170,13 @@ function HomeTypePicker({ onChange }: { onChange: (keys: string[]) => void }) {
         {options.map((o) => {
           const active = sel.includes(o.key);
           return (
-            <button key={o.key} type="button" onClick={() => toggle(o.key)} aria-pressed={active} style={tileStyle(active)}>
+            <button
+              key={o.key}
+              type="button"
+              onClick={() => toggle(o.key)}
+              aria-pressed={active}
+              style={tileStyle(active, accent)}
+            >
               <div style={{ fontSize: 22, marginBottom: 6 }}>{o.icon}</div>
               <div>{o.label}</div>
             </button>
@@ -158,7 +184,11 @@ function HomeTypePicker({ onChange }: { onChange: (keys: string[]) => void }) {
         })}
       </div>
       <div style={{ marginTop: 8 }}>
-        <button type="button" onClick={reset} style={{ background: "none", border: "none", color: "#2563eb", textDecoration: "underline", padding: 0 }}>
+        <button
+          type="button"
+          onClick={reset}
+          style={{ background: "none", border: "none", color: accent, textDecoration: "underline", padding: 0 }}
+        >
           Reset
         </button>
       </div>
@@ -173,7 +203,7 @@ export default function ClientForm({ formId, accent }: Props) {
   const [types, setTypes] = useState<string[]>([]);
 
   return (
-    <form method="post" action="/api/submit" style={{ display: "grid", gap: 12 }}>
+    <form method="post" action="/api/submit" style={{ display: "grid", gap: 14 }}>
       <input type="hidden" name="form_id" value={formId} />
 
       <label>
@@ -217,9 +247,9 @@ export default function ClientForm({ formId, accent }: Props) {
         </select>
       </label>
 
-      <BedsPicker onChange={setBeds} />
-      <BathsPicker onChange={setBaths} />
-      <HomeTypePicker onChange={setTypes} />
+      <BedsPicker onChange={setBeds} accent={accent} />
+      <BathsPicker onChange={setBaths} accent={accent} />
+      <HomeTypePicker onChange={setTypes} accent={accent} />
 
       <label>
         Parking
@@ -277,7 +307,7 @@ export default function ClientForm({ formId, accent }: Props) {
       <label>
         Areas
         <br />
-        <input name="areas" placeholder="Crown Point, Cedar Lake" style={inp} />
+        <input name="areas" placeholder="Orland Park, Crown Point" style={inp} />
       </label>
 
       <label>
@@ -292,7 +322,10 @@ export default function ClientForm({ formId, accent }: Props) {
         <textarea name="notes" rows={4} style={{ ...inp, height: "auto" }} />
       </label>
 
-      <button type="submit" style={{ padding: "10px 14px", borderRadius: 8, background: accent, color: "#fff", border: "none" }}>
+      <button
+        type="submit"
+        style={{ padding: "12px 16px", borderRadius: 10, background: accent, color: "#fff", border: "none", fontWeight: 600 }}
+      >
         Send
       </button>
     </form>
