@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import React, { useState } from "react";
 
 type Props = { formId: string; accent: string };
 
-const inp: CSSProperties = {
+const inp: React.CSSProperties = {
   width: "100%",
   padding: "8px 10px",
   border: "1px solid #d1d5db",
   borderRadius: 8,
 };
 
-const pillStyle = (active: boolean): CSSProperties => ({
+const pillStyle = (active: boolean): React.CSSProperties => ({
   padding: "8px 12px",
   borderRadius: 8,
   border: active ? "2px solid #2563eb" : "1px solid #d1d5db",
@@ -21,7 +21,7 @@ const pillStyle = (active: boolean): CSSProperties => ({
   cursor: "pointer",
 });
 
-const tileStyle = (active: boolean): CSSProperties => ({
+const tileStyle = (active: boolean): React.CSSProperties => ({
   padding: 14,
   textAlign: "center",
   borderRadius: 12,
