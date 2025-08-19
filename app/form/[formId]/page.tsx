@@ -1,20 +1,21 @@
-import { supabaseServer } from "@/lib/supabaseServer";
+import React from "react";
 import ClientForm from "./ClientForm";
+import { supabaseServer } from "@/lib/supabaseServer";
 
 export default async function Page({ params }: { params: { formId: string } }) {
-  const formId = params.formId;
+  const { formId } = params;
   const sb = supabaseServer();
 
-  // Get the form + agent branding
+  // Fetch form -> agent branding
   const { data: f } = await sb
     .from("forms")
-    .select("id, agent_id")
+    .select("agent_id")
     .eq("id", formId)
     .single();
 
-  let brandColor: string | null = null;
+  let accent = "#111";
   let logoUrl: string | null = null;
-  let displayName: string | null = null;
+  let displayName = "Buyer Preferences";
 
   if (f?.agent_id) {
     const { data: a } = await sb
@@ -22,23 +23,23 @@ export default async function Page({ params }: { params: { formId: string } }) {
       .select("display_name, brand_color, logo_url")
       .eq("id", f.agent_id)
       .single();
-    brandColor = a?.brand_color ?? null;
-    logoUrl = a?.logo_url ?? null;
-    displayName = a?.display_name ?? null;
+    if (a?.brand_color) accent = a.brand_color;
+    if (a?.logo_url) logoUrl = a.logo_url;
+    if (a?.display_name) displayName = a.display_name;
   }
 
-  const accent = brandColor ?? "#111";
-
   return (
-    <main style={{ maxWidth: 760, margin: "32px auto", padding: "0 16px" }}>
+    <div style={{ maxWidth: 760, margin: "32px auto", padding: "0 16px" }}>
       <header style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         {logoUrl ? <img src={logoUrl} alt="logo" style={{ height: 40, width: "auto" }} /> : null}
-        <h1 style={{ margin: 0 }}>{displayName ?? "Buyer Preferences"}</h1>
+        <h1 style={{ margin: 0 }}>{displayName}</h1>
       </header>
 
-      <style>{`
-        :root { --accent: ${accent}; }
-        .btn-primary { background: var(--accent); color:#fff; border:none; }
-        .btn-primary:hover { filter: brightness(.95); }
-        .link-accent { color: var(--accent); }
-      `}</styl
+      <ClientForm formId={formId} accent={accent} />
+
+      <p style={{ marginTop: 16, fontSize: 12, opacity: 0.7 }}>
+        Powered by Buyer Preference Link
+      </p>
+    </div>
+  );
+}
