@@ -13,6 +13,7 @@ export async function POST(req: Request) {
     timeline: fd.get("timeline")?.toString() || "",
     price_range: fd.get("price_range")?.toString() || "",
     loan_type: fd.get("loan_type")?.toString() || "",
+    home_types: fd.get("home_types")?.toString() || "",
     beds: fd.get("beds")?.toString() || "",
     baths: fd.get("baths")?.toString() || "",
     parking: fd.get("parking")?.toString() || "",
