@@ -30,9 +30,32 @@ const tileStyle = (active: boolean, accent: string): React.CSSProperties => ({
   cursor: "pointer",
 });
 
+/* -------------- Small helpers -------------- */
+function formatAmount(input: string): number | null {
+  // supports "300000", "$300,000", "300k" or "300 K"
+  const m = input.trim().match(/^\$?\s*([\d,\.]+)\s*([kK])?\s*$/);
+  if (!m) return null;
+  const raw = m[1].replace(/[,]/g, "");
+  const num = Number(raw);
+  if (Number.isNaN(num)) return null;
+  return m[2] ? Math.round(num * 1000) : Math.round(num);
+}
+
+function formatPriceRangePretty(value: string): string {
+  // Find up to two amounts in the string
+  const parts = Array.from(value.matchAll(/\$?\s*[\d,\.]+\s*[kK]?/g)).map((m) => m[0]);
+  const amounts = parts.map(formatAmount).filter((n): n is number => n !== null);
+  if (amounts.length === 0) return value;
+  const fmt = new Intl.NumberFormat("en-US");
+  if (amounts.length === 1) return `$${fmt.format(amounts[0])}`;
+  const [a, b] = [Math.min(amounts[0], amounts[1]), Math.max(amounts[0], amounts[1])];
+  return `$${fmt.format(a)} – $${fmt.format(b)}`;
+}
+
+/* -------------- Pickers -------------- */
 function BedsPicker({ onChange, accent }: { onChange: (v: string) => void; accent: string }) {
   const labels = ["Any", "Studio", "1", "2", "3", "4", "5+"] as const;
-  const [start, setStart] = useState<number | null>(0); // default Any selected
+  const [start, setStart] = useState<number | null>(0); // "Any" selected
   const [end, setEnd] = useState<number | null>(null);
   const [val, setVal] = useState<string>("Any");
 
@@ -51,25 +74,12 @@ function BedsPicker({ onChange, accent }: { onChange: (v: string) => void; accen
   };
 
   const clickIdx = (i: number) => {
-    // index 0 is "Any" — reset when tapped
     if (i === 0) {
-      setStart(0);
-      setEnd(null);
-      commit(0, null);
-      return;
+      setStart(0); setEnd(null); commit(0, null); return;
     }
-    if (start === null || start === 0) {
-      setStart(i);
-      setEnd(null);
-      commit(i, null);
-    } else if (end === null) {
-      setEnd(i);
-      commit(start, i);
-    } else {
-      setStart(i);
-      setEnd(null);
-      commit(i, null);
-    }
+    if (start === null || start === 0) { setStart(i); setEnd(null); commit(i, null); }
+    else if (end === null) { setEnd(i); commit(start, i); }
+    else { setStart(i); setEnd(null); commit(i, null); }
   };
 
   const isActive = (i: number) =>
@@ -85,13 +95,8 @@ function BedsPicker({ onChange, accent }: { onChange: (v: string) => void; accen
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {labels.map((label, i) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => clickIdx(i)}
-            aria-pressed={isActive(i)}
-            style={pillStyle(isActive(i), accent)}
-          >
+          <button key={label} type="button" onClick={() => clickIdx(i)} aria-pressed={isActive(i)}
+            style={pillStyle(isActive(i), accent)}>
             {label}
           </button>
         ))}
@@ -106,21 +111,11 @@ function BathsPicker({ onChange, accent }: { onChange: (v: string) => void; acce
   const [val, setVal] = useState<string>("Any");
   return (
     <div style={{ marginTop: 16 }}>
-      <div style={{ marginBottom: 6 }}>
-        <b>Baths</b>
-      </div>
+      <div style={{ marginBottom: 6 }}><b>Baths</b></div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {opts.map((o) => (
-          <button
-            key={o}
-            type="button"
-            onClick={() => {
-              setVal(o);
-              onChange(o);
-            }}
-            aria-pressed={val === o}
-            style={pillStyle(val === o, accent)}
-          >
+          <button key={o} type="button" onClick={() => { setVal(o); onChange(o); }}
+            aria-pressed={val === o} style={pillStyle(val === o, accent)}>
             {o}
           </button>
         ))}
@@ -130,13 +125,7 @@ function BathsPicker({ onChange, accent }: { onChange: (v: string) => void; acce
   );
 }
 
-function HomeTypePicker({
-  onChange,
-  accent,
-}: {
-  onChange: (keys: string[]) => void;
-  accent: string;
-}) {
+function HomeTypePicker({ onChange, accent }: { onChange: (keys: string[]) => void; accent: string }) {
   const options = [
     { key: "house", label: "House", icon: "🏠" },
     { key: "townhouse", label: "Townhouse", icon: "🏘️" },
@@ -149,34 +138,21 @@ function HomeTypePicker({
   ] as const;
 
   const [sel, setSel] = useState<string[]>([]);
-
   const toggle = (k: string) => {
     const next = sel.includes(k) ? sel.filter((x) => x !== k) : [...sel, k];
-    setSel(next);
-    onChange(next);
+    setSel(next); onChange(next);
   };
-
-  const reset = () => {
-    setSel([]);
-    onChange([]);
-  };
+  const reset = () => { setSel([]); onChange([]); };
 
   return (
     <div style={{ marginTop: 16 }}>
-      <div style={{ marginBottom: 6 }}>
-        <b>Home Type</b>
-      </div>
+      <div style={{ marginBottom: 6 }}><b>Home Type</b></div>
       <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))" }}>
         {options.map((o) => {
           const active = sel.includes(o.key);
           return (
-            <button
-              key={o.key}
-              type="button"
-              onClick={() => toggle(o.key)}
-              aria-pressed={active}
-              style={tileStyle(active, accent)}
-            >
+            <button key={o.key} type="button" onClick={() => toggle(o.key)} aria-pressed={active}
+              style={tileStyle(active, accent)}>
               <div style={{ fontSize: 22, marginBottom: 6 }}>{o.icon}</div>
               <div>{o.label}</div>
             </button>
@@ -184,11 +160,8 @@ function HomeTypePicker({
         })}
       </div>
       <div style={{ marginTop: 8 }}>
-        <button
-          type="button"
-          onClick={reset}
-          style={{ background: "none", border: "none", color: accent, textDecoration: "underline", padding: 0 }}
-        >
+        <button type="button" onClick={reset}
+          style={{ background: "none", border: "none", color: accent, textDecoration: "underline", padding: 0 }}>
           Reset
         </button>
       </div>
@@ -197,14 +170,24 @@ function HomeTypePicker({
   );
 }
 
+/* -------------- Main Form -------------- */
 export default function ClientForm({ formId, accent }: Props) {
   const [beds, setBeds] = useState("Any");
   const [baths, setBaths] = useState("Any");
   const [types, setTypes] = useState<string[]>([]);
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [price, setPrice] = useState("");
+
+  const onPriceBlur = () => setPrice(formatPriceRangePretty(price));
 
   return (
     <form method="post" action="/api/submit" style={{ display: "grid", gap: 14 }}>
       <input type="hidden" name="form_id" value={formId} />
+      {/* keep the old 'contact' for the backend email; use the email value */}
+      <input type="hidden" name="contact" value={email} />
+      {/* store phone as its own field too */}
+      <input type="hidden" name="phone" value={phone} />
 
       <label>
         Full name
@@ -212,11 +195,20 @@ export default function ClientForm({ formId, accent }: Props) {
         <input name="full_name" required style={inp} />
       </label>
 
-      <label>
-        Contact
-        <br />
-        <input name="contact" placeholder="email or phone" style={inp} />
-      </label>
+      <div style={{display:"grid", gap:10, gridTemplateColumns:"1fr 1fr"}}>
+        <label>
+          Email
+          <br />
+          <input name="email" type="email" placeholder="name@email.com"
+                 value={email} onChange={(e)=>setEmail(e.target.value)} style={inp} />
+        </label>
+        <label>
+          Phone
+          <br />
+          <input name="phone_display" placeholder="(555) 555-5555"
+                 value={phone} onChange={(e)=>setPhone(e.target.value)} style={inp} />
+        </label>
+      </div>
 
       <label>
         Timeline
@@ -232,7 +224,9 @@ export default function ClientForm({ formId, accent }: Props) {
       <label>
         Price range
         <br />
-        <input name="price_range" placeholder="$300–400k" style={inp} />
+        <input name="price_range" placeholder="$300,000 – $400,000"
+               value={price} onChange={(e)=>setPrice(e.target.value)} onBlur={onPriceBlur}
+               style={inp} />
       </label>
 
       <label>
@@ -295,13 +289,13 @@ export default function ClientForm({ formId, accent }: Props) {
       <label>
         Must-haves
         <br />
-        <input name="must_haves" placeholder="basement, 2-car" style={inp} />
+        <input name="must_haves" placeholder="pool, shed" style={inp} />
       </label>
 
       <label>
         Dealbreakers
         <br />
-        <input name="dealbreakers" placeholder="busy road" style={inp} />
+        <input name="dealbreakers" placeholder="busy road, HOA" style={inp} />
       </label>
 
       <label>
@@ -326,7 +320,7 @@ export default function ClientForm({ formId, accent }: Props) {
         type="submit"
         style={{ padding: "12px 16px", borderRadius: 10, background: accent, color: "#fff", border: "none", fontWeight: 600 }}
       >
-        Send
+        Share Preferences
       </button>
     </form>
   );

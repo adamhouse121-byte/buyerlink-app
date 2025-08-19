@@ -23,7 +23,10 @@ export async function POST(req: Request) {
     areas: fd.get("areas")?.toString() || "",
     max_commute: fd.get("max_commute")?.toString() || "",
     notes: fd.get("notes")?.toString() || "",
+email: fd.get("email")?.toString() || "",
+phone: fd.get("phone")?.toString() || "" || fd.get("phone_display")?.toString() || "",
   };
+p_buyer_email: answers.email || answers.contact || null,
 
   // checkbox arrays + “Other”
   const toList = (v: any) =>
