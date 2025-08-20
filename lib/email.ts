@@ -1,23 +1,21 @@
+// lib/email.ts
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY || "");
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM = process.env.EMAIL_FROM || "Buyer Pref <hello@buyerpref.link>";
 
-export async function sendSummaryEmail(to: string, subject: string, text: string) {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn("RESEND_API_KEY missing; skipping email send.");
-    return { skipped: true };
-  }
+export async function sendSummaryEmail(to: string, subject: string, body: string) {
   try {
-    const { error } = await resend.emails.send({
-      from: "BuyerLink <onboarding@resend.dev>", // OK for testing
+    const r = await resend.emails.send({
+      from: FROM,
       to,
       subject,
-      text,
+      text: body,
     });
-    if (error) throw error;
-    return { ok: true };
-  } catch (e: any) {
-    console.error("Email send failed:", e);
-    return { ok: false, error: String(e) };
+    return r;
+  } catch (err) {
+    console.error("Email send failed:", err);
+    // don't crash the request if email fails
+    return { error: String(err) };
   }
 }
