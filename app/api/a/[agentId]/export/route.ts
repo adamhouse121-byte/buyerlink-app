@@ -1,35 +1,69 @@
+// /app/api/a/[agentId]/export/route.ts
 import { supabaseServer } from "@/lib/supabaseServer";
 
-export async function GET(_: Request, { params }: { params: { agentId: string } }) {
+export async function GET(
+  _req: Request,
+  { params }: { params: { agentId: string } }
+) {
   const sb = supabaseServer();
-  const { agentId } = params;
 
-  const { data: forms } = await sb.from("forms").select("id").eq("agent_id", agentId);
-  const formIds = (forms || []).map(f => f.id);
-  if (!formIds.length) return new Response("no data", { status: 404 });
+  // Pro check
+  const { data: agent, error: agErr } = await sb
+    .from("agents")
+    .select("plan, id, display_name")
+    .eq("id", params.agentId)
+    .single();
 
-  const { data: rows } = await sb
+  if (agErr || !agent) {
+    return new Response("Agent not found", { status: 404 });
+  }
+  if (agent.plan !== "pro") {
+    return new Response("CSV export is a Pro feature", { status: 402 });
+  }
+
+  // Find forms for the agent
+  const { data: forms, error: fErr } = await sb
+    .from("forms")
+    .select("id")
+    .eq("agent_id", agent.id);
+
+  if (fErr) return new Response(fErr.message, { status: 500 });
+
+  const formIds = (forms ?? []).map((f: any) => f.id);
+  if (formIds.length === 0) return new Response("No data", { status: 200 });
+
+  // Pull responses
+  const { data: rows, error: rErr } = await sb
     .from("responses")
-    .select("id,created_at,buyer_name,buyer_email,match_score,summary_text,answers_json")
+    .select("id, created_at, form_id, answers_json, summary_text, match_score")
     .in("form_id", formIds)
-    .order("created_at", { ascending: false })
-    .limit(1000);
+    .order("created_at", { ascending: false });
 
-  const esc = (s: any) => {
-    const v = s == null ? "" : String(s);
-    return `"${v.replace(/"/g, '""').replace(/\r?\n/g, " ")}"`;
-  };
+  if (rErr) return new Response(rErr.message, { status: 500 });
 
-  const header = ["id","created_at","buyer_name","buyer_email","match_score","summary_text","answers_json"].join(",");
-  const lines = (rows || []).map(r =>
-    [esc(r.id), esc(r.created_at), esc(r.buyer_name), esc(r.buyer_email),
-     esc(r.match_score), esc(r.summary_text), esc(JSON.stringify(r.answers_json || {}))].join(","));
-  const csv = [header, ...lines].join("\n");
+  // Build CSV
+  const headers = ["id", "created_at", "form_id", "match_score", "summary_text", "answers_json"];
+  const escape = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
-  return new Response(csv, {
+  const lines = [
+    headers.join(","),
+    ...(rows ?? []).map((r: any) =>
+      [
+        r.id,
+        r.created_at,
+        r.form_id,
+        r.match_score ?? "",
+        r.summary_text ?? "",
+        JSON.stringify(r.answers_json ?? {}),
+      ].map(escape).join(",")
+    ),
+  ].join("\n");
+
+  return new Response(lines, {
+    status: 200,
     headers: {
-      "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="responses_${agentId}.csv"`,
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="buyerlink-${agent.id}.csv"`,
     },
   });
 }

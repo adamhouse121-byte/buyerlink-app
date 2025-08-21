@@ -1,55 +1,104 @@
+// /app/api/maker/route.ts
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabaseServer";
+import { limitsFor } from "@/lib/plan";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  const { password, email, display_name, plan = "free", brand_color, logo_url } = body || {};
 
-  if (!password || password !== process.env.MAKER_PASSWORD) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-  if (!email || !display_name) {
-    return NextResponse.json({ ok: false, error: "Missing email or display_name" }, { status: 400 });
+  const pass = String(body.password ?? "");
+  if (pass !== process.env.MAKER_PASSWORD) {
+    return NextResponse.json({ ok: false, error: "Bad password" }, { status: 401 });
   }
 
-  const sb = supabaseServer(); // uses service role key
+  const email = String(body.email ?? "").trim().toLowerCase();
+  const display_name = String(body.display_name ?? "").trim();
+  const plan = (String(body.plan ?? "free").toLowerCase() === "pro" ? "pro" : "free") as "free" | "pro";
+  const brand_color = String(body.brand_color ?? "#2E5BFF");
+  const logo_url = String(body.logo_url ?? "");
 
-  // 1) Create auth user
-  const { data: created, error: createErr } = await sb.auth.admin.createUser({
-    email,
-    email_confirm: false,
-  });
-  if (createErr || !created?.user?.id) {
-    return NextResponse.json({ ok: false, error: createErr?.message || "auth create failed" }, { status: 400 });
+  if (!email) {
+    return NextResponse.json({ ok: false, error: "Email required" }, { status: 400 });
   }
-  const userId = created.user.id;
 
-  // 2) Insert agent row
-  const { error: agentErr } = await sb.from("agents").insert({
-    id: userId,
-    display_name,
-    email,
-    plan,
-    brand_color: brand_color || null,
-    logo_url: logo_url || null,
-  });
-  if (agentErr) return NextResponse.json({ ok: false, error: agentErr.message }, { status: 400 });
+  const sb = supabaseServer();
 
-  // 3) Create default form
-  const { data: formRow, error: formErr } = await sb
+  // find or create agent
+  const { data: existing } = await sb
+    .from("agents")
+    .select("id, plan")
+    .eq("email", email)
+    .maybeSingle();
+
+  let agentId: string;
+
+  if (existing) {
+    await sb
+      .from("agents")
+      .update({ display_name, plan, brand_color, logo_url })
+      .eq("id", existing.id);
+    agentId = existing.id;
+  } else {
+    const { data, error } = await sb
+      .from("agents")
+      .insert({
+        email,
+        display_name,
+        plan,
+        brand_color,
+        logo_url,
+        submissions_this_period: 0,
+        period_start: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString(),
+      })
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json({ ok: false, error: error?.message || "agent create failed" }, { status: 500 });
+    }
+    agentId = data.id;
+  }
+
+  // Enforce form cap for the agent's current plan
+  const caps = limitsFor(plan);
+  const { count, error: cntErr } = await sb
     .from("forms")
-    .insert({ agent_id: userId, name: "Default Buyer Form" })
+    .select("id", { count: "exact", head: true })
+    .eq("agent_id", agentId);
+
+  if (cntErr) {
+    return NextResponse.json({ ok: false, error: cntErr.message }, { status: 500 });
+  }
+
+  if ((count ?? 0) >= caps.maxForms) {
+    return NextResponse.json(
+      { ok: false, error: "Free plan allows 1 form. Upgrade to Pro for unlimited forms." },
+      { status: 402 }
+    );
+  }
+
+  // create form
+  const { data: form, error: formErr } = await sb
+    .from("forms")
+    .insert({
+      agent_id: agentId,
+      name: "Default Buyer Form",
+      is_public: true,
+      schema_json: {}, // app renders the static form
+    })
     .select("id")
     .single();
-  if (formErr || !formRow) {
-    return NextResponse.json({ ok: false, error: formErr?.message || "form create failed" }, { status: 400 });
+
+  if (formErr || !form) {
+    return NextResponse.json({ ok: false, error: formErr?.message || "form create failed" }, { status: 500 });
   }
 
+  const base = new URL(req.url).origin;
   return NextResponse.json({
     ok: true,
-    user_id: userId,
-    form_id: formRow.id,
-    form_url: `/form/${formRow.id}`,
-    settings_url: `/a/${userId}/settings`,
+    agent_id: agentId,
+    form_id: form.id,
+    form_url: `${base}/form/${form.id}`,
+    settings_url: `${base}/a/${agentId}/settings`,
   });
 }
