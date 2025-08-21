@@ -1,47 +1,132 @@
+// /app/page.tsx
 export default function Home() {
   return (
-    <main style={{maxWidth:860, margin:"40px auto", padding:"0 16px"}}>
-      <header style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24}}>
-        <h1 style={{margin:0}}>Buyer Preference Link</h1>
-        <a href="/maker" style={{fontSize:14, opacity:.7}}>Maker (admin)</a>
+    <main style={{ maxWidth: 980, margin: "0 auto", padding: "48px 20px" }}>
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <img src="/logo.svg" alt="BuyerPref" style={{ height: 40 }} />
+          <strong style={{ fontSize: 20 }}>BuyerPref</strong>
+        </div>
+        <nav style={{ display: "flex", gap: 16 }}>
+          <a href="#features">Features</a>
+          <a href="#pricing">Pricing</a>
+          <a href="/signup" style={{ fontWeight: 600 }}>Get started</a>
+        </nav>
       </header>
 
-      <section style={{display:"grid", gap:16}}>
-        <h2 style={{marginTop:0}}>Turn buyer preferences into a one-pager you can act on.</h2>
-        <p style={{opacity:.8}}>
-          Text a link. Get must-haves, dealbreakers, areas, timeline, and a tidy summary in your inbox—plus a score so you can prioritize.
-        </p>
-        <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
-          <a href="/maker"
-             style={{background:"#2E5BFF", color:"#fff", padding:"10px 16px", borderRadius:8, textDecoration:"none"}}>
-            Get your Buyer Link
-          </a>
-          <a href="mailto:you@example.com?subject=BuyerLink demo"
-             style={{padding:"10px 16px", border:"1px solid #ddd", borderRadius:8, textDecoration:"none"}}>
-            Ask for a demo
-          </a>
+      <section style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 24, alignItems: "center", marginBottom: 36 }}>
+        <div>
+          <h1 style={{ fontSize: 40, lineHeight: 1.1, margin: "0 0 12px" }}>
+            One link to collect buyer preferences.<br/> Instant summary + match score.
+          </h1>
+          <p style={{ fontSize: 18, color: "#555", margin: "0 0 18px" }}>
+            Stop chasing vague texts. Send a single link, get structured answers, auto-summarized with a score so you can prioritize.
+          </p>
+          <div style={{ display: "flex", gap: 12 }}>
+            <a href="/signup" style={btnPrimary}>Create my form</a>
+            <a href="/form/0455136e-693c-4acc-b40c-aa2052669753" style={btnGhost}>See a sample</a>
+          </div>
+        </div>
+        <div>
+          <img src="/hero.png" alt="BuyerPref preview" style={{ width: "100%", borderRadius: 12, boxShadow: "0 10px 28px rgba(0,0,0,.12)" }} />
         </div>
       </section>
 
-      <section style={{display:"grid", gap:16, marginTop:32}}>
-        <div style={{border:"1px solid #eee", borderRadius:12, padding:16}}>
-          <h3 style={{marginTop:0}}>✅ Two-minute setup</h3>
-          <p style={{marginTop:8, opacity:.8}}>Create your agent, paste a brand color & logo, share the link.</p>
-        </div>
-        <div style={{border:"1px solid #eee", borderRadius:12, padding:16}}>
-          <h3 style={{marginTop:0}}>🧠 Useful summaries</h3>
-          <p style={{marginTop:8, opacity:.8}}>Clear text summary + match score + tags for quick sorting.</p>
-        </div>
-        <div style={{border:"1px solid #eee", borderRadius:12, padding:16}}>
-          <h3 style={{marginTop:0}}>📥 Inbox & CSV</h3>
-          <p style={{marginTop:8, opacity:.8}}>See your last submissions and export to share or archive.</p>
+      <section id="features" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 18, marginBottom: 36 }}>
+        {[
+          { t: "Share one link", d: "No apps. No logins. Just a link with your logo & color." },
+          { t: "Structured answers", d: "Beds, baths, must-haves, dealbreakers, commute, budget—cleanly captured." },
+          { t: "Instant summary", d: "Auto-generated summary and match score in your inbox & dashboard." },
+          { t: "CSV export", d: "Export leads to your CRM (Pro)." },
+          { t: "Brandable", d: "Your name, color, and logo—instantly." },
+          { t: "Private", d: "RLS-protected storage on Supabase." },
+        ].map((f) => (
+          <div key={f.t} style={{ border: "1px solid #eee", borderRadius: 12, padding: 16 }}>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>{f.t}</div>
+            <div style={{ color: "#555" }}>{f.d}</div>
+          </div>
+        ))}
+      </section>
+
+      <section id="pricing" style={{ marginBottom: 48 }}>
+        <h2 style={{ margin: "0 0 16px" }}>Pricing</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
+          <div style={card}>
+            <div style={{ fontSize: 22, fontWeight: 700 }}>Free</div>
+            <div style={{ fontSize: 28, margin: "6px 0 12px" }}>$0</div>
+            <ul style={ul}>
+              <li>1 form</li>
+              <li>15 responses / month</li>
+              <li>Email notifications</li>
+              <li>Basic match score</li>
+              <li style={{ opacity: 0.6 }}>CSV export</li>
+            </ul>
+            <a href="/signup" style={btnPrimaryBlock}>Start free</a>
+          </div>
+          <div style={card}>
+            <div style={{ fontSize: 22, fontWeight: 700 }}>Pro</div>
+            <div style={{ fontSize: 28, margin: "6px 0 12px" }}>$4.99 / month</div>
+            <ul style={ul}>
+              <li>Unlimited forms</li>
+              <li>100 responses / month</li>
+              <li>Email notifications</li>
+              <li>Priority match score</li>
+              <li>CSV export</li>
+            </ul>
+            <a href="/signup" style={btnGhostBlock}>Upgrade</a>
+          </div>
         </div>
       </section>
 
-      <footer style={{marginTop:32, opacity:.6, fontSize:12}}>
-        <a href="/terms" style={{marginRight:12}}>Terms</a>
-        <a href="/privacy">Privacy</a>
+      <footer style={{ fontSize: 12, color: "#666", marginTop: 24 }}>
+        © {new Date().getFullYear()} BuyerPref — <a href="/maker" style={{ color: "#666" }}>admin</a>
       </footer>
     </main>
   );
 }
+
+const btnPrimary: React.CSSProperties = {
+  display: "inline-block",
+  padding: "10px 14px",
+  background: "#2E5BFF",
+  color: "white",
+  borderRadius: 10,
+  textDecoration: "none",
+  fontWeight: 600,
+};
+
+const btnGhost: React.CSSProperties = {
+  display: "inline-block",
+  padding: "10px 14px",
+  background: "white",
+  color: "#2E5BFF",
+  border: "1px solid #2E5BFF",
+  borderRadius: 10,
+  textDecoration: "none",
+  fontWeight: 600,
+};
+
+const card: React.CSSProperties = {
+  border: "1px solid #eee",
+  borderRadius: 12,
+  padding: 16,
+  boxShadow: "0 8px 20px rgba(0,0,0,.06)",
+};
+
+const ul: React.CSSProperties = {
+  margin: "0 0 16px",
+  paddingLeft: 18,
+  lineHeight: 1.6,
+};
+
+const btnPrimaryBlock: React.CSSProperties = {
+  ...btnPrimary,
+  display: "block",
+  textAlign: "center",
+};
+
+const btnGhostBlock: React.CSSProperties = {
+  ...btnGhost,
+  display: "block",
+  textAlign: "center",
+};
