@@ -6,7 +6,19 @@ import { limitsFor } from "@/lib/plan";
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
 
-  const pass = String(body.password ?? "");
+// allow open join when /api/maker?open=1 is used
+const openJoin = new URL(req.url).searchParams.get("open") === "1";
+
+if (!openJoin) {
+  // existing password check block stays as-is
+  // if you had:
+  // const password = (await req.formData()).get("password")
+  // compare to process.env.MAKER_PASSWORD etc.
+  // and return 401 if wrong.
+}
+
+  
+const pass = String(body.password ?? "");
   if (pass !== process.env.MAKER_PASSWORD) {
     return NextResponse.json({ ok: false, error: "Bad password" }, { status: 401 });
   }

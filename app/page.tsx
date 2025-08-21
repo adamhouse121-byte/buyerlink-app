@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 export default function Page() {
   // If you don’t have a preview image yet, you can set this to '' and it will hide.
-  const previewSrc = '/hero-preview.png'; // put a real file in /public or leave '' to hide
+  const previewSrc = ''; // hide preview until you add a real image; // put a real file in /public or leave '' to hide
 
   const [showPreview, setShowPreview] = useState(Boolean(previewSrc));
 
@@ -22,10 +22,13 @@ export default function Page() {
               with a score so you can prioritize.
             </p>
 
-            <div className="row">
-              <a className="btn btn-primary" href="/join">Create my form</a>
-              <a className="btn btn-ghost" href="/form/0455136e-693c-4acc-b40c-aa2052669753">See a sample</a>
-            </div>
+         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+  <a className="btn btn-primary" href="/join">Create my form</a>
+  {/* 👉 Replace YOUR_FORM_ID below with your real form id (from Supabase > public.forms) */}
+  <a className="btn btn-ghost" href="/form/0455136e-693c-4acc-b40c-aa2052669753?demo=1">See a sample</a>
+</div>
+
+
           </div>
 
           {/* RIGHT: preview image (hidden if it fails to load or you don't have one yet) */}
