@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Forward the agentId from the old URL to a simple page
+  // Forward the agentId from the old URL to the simple page
   async rewrites() {
     return [
       { source: '/a/:agentId/settings', destination: '/moved-settings?agentId=:agentId' },
