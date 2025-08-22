@@ -8,11 +8,18 @@ type Status = 'idle' | 'sending' | 'sent' | 'error';
 export default function MovedSettingsPage() {
   const params = useSearchParams();
   const agentId = params.get('agentId') || '';
+
   const [email, setEmail] = React.useState('');
   const [status, setStatus] = React.useState<Status>('idle');
   const [message, setMessage] = React.useState('');
 
-  // Auto-send if an agentId is present in the URL
+  // Helpful booleans so we don't compare inside narrowed branches
+  const isSending = status === 'sending';
+  const isSent = status === 'sent';
+  const isError = status === 'error';
+  const isIdle = status === 'idle';
+
+  // Auto-send if agentId present
   React.useEffect(() => {
     let cancelled = false;
     async function run() {
@@ -38,7 +45,6 @@ export default function MovedSettingsPage() {
     return () => { cancelled = true; };
   }, [agentId]);
 
-  // Fallback: send by email if needed
   async function sendByEmail() {
     if (!email) return;
     setStatus('sending');
@@ -59,17 +65,14 @@ export default function MovedSettingsPage() {
     <div style={{ padding: 24, maxWidth: 720, margin: '0 auto' }}>
       <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>This settings page has moved</h1>
 
-      {status === 'sending' && (
-        <p style={{ color: '#555' }}>Sending your secure settings link…</p>
-      )}
+      {isSending && <p style={{ color: '#555' }}>Sending your secure settings link…</p>}
 
-      {status === 'sent' && (
-        <p style={{ color: '#16a34a' }}>{message}</p>
-      )}
+      {isSent && <p style={{ color: '#16a34a' }}>{message}</p>}
 
-      {status === 'error' && (
+      {(isError || isIdle) && (
         <>
-          <p style={{ color: '#ef4444', marginBottom: 8 }}>{message || 'Failed to send.'}</p>
+          {isError && <p style={{ color: '#ef4444', marginBottom: 8 }}>{message || 'Failed to send.'}</p>}
+
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <input
               type="email"
@@ -80,39 +83,16 @@ export default function MovedSettingsPage() {
             />
             <button
               onClick={sendByEmail}
-              disabled={!email || status === 'sending'}
+              disabled={!email || isSending}
               style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 12, background: '#fff' }}
             >
-              {status === 'sending' ? 'Sending…' : 'Resend secure link'}
+              {isSending ? 'Sending…' : isIdle ? 'Send secure link' : 'Resend secure link'}
             </button>
           </div>
+
           <p style={{ color: '#777', marginTop: 12, fontSize: 13 }}>
             Tip: once you open the email, bookmark the settings link for next time.
           </p>
-        </>
-      )}
-
-      {status === 'idle' && (
-        <>
-          <p style={{ color: '#555' }}>
-            We now use password-less access. Enter your email and we’ll email your secure settings link.
-          </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.currentTarget.value)}
-              placeholder="you@example.com"
-              style={{ padding: 8, border: '1px solid #d1d5db', borderRadius: 8, minWidth: 260 }}
-            />
-            <button
-              onClick={sendByEmail}
-              disabled={!email || status === 'sending'}
-              style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 12, background: '#fff' }}
-            >
-              Send secure link
-            </button>
-          </div>
         </>
       )}
     </div>
