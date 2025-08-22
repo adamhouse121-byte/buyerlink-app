@@ -2,108 +2,79 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Server-only page
-import 'server-only';
+// No server-side data; just a client form to resend the secure link.
 import * as React from 'react';
-import { createClient } from '@supabase/supabase-js';
 
-// Lazy init (avoid running at import time during build)
-function getAdmin() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
-}
-
-function maskEmail(e: string) {
-  const [u, d] = e.split('@');
-  if (!d) return e;
-  const shown = u.slice(0, 2);
-  return `${shown}${'*'.repeat(Math.max(1, u.length - 2))}@${d}`;
-}
-
-function Resend({ email }: { email: string }) {
+function ResendForm() {
   'use client';
-  const [state, setState] = React.useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
-  React.useEffect(() => {
-    let cancelled = false;
-    const send = async () => {
-      try {
-        setState('sending');
-        await fetch(`/api/agents/send-links?email=${encodeURIComponent(email)}`);
-        if (!cancelled) setState('sent');
-      } catch {
-        if (!cancelled) setState('error');
+  const [email, setEmail] = React.useState('');
+  const [status, setStatus] = React.useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [message, setMessage] = React.useState<string>('');
+
+  async function send() {
+    if (!email) return;
+    setStatus('sending');
+    setMessage('');
+    try {
+      const res = await fetch(`/api/agents/send-links?email=${encodeURIComponent(email)}`, {
+        method: 'GET',
+      });
+      if (res.ok) {
+        setStatus('sent');
+        setMessage('Secure link sent. Check your inbox.');
+      } else {
+        const j = await res.json().catch(() => ({}));
+        setStatus('error');
+        setMessage(j?.error || 'Failed to send. Please try again.');
       }
-    };
-    send();
-    return () => { cancelled = true; };
-  }, [email]);
+    } catch {
+      setStatus('error');
+      setMessage('Network error. Please try again.');
+    }
+  }
 
   return (
-    <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      <button
-        onClick={async () => {
-          try {
-            setState('sending');
-            await fetch(`/api/agents/send-links?email=${encodeURIComponent(email)}`);
-            setState('sent');
-          } catch {
-            setState('error');
-          }
-        }}
-        style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 12, background: '#fff' }}
-      >
-        {state === 'sending' ? 'Sending…' : 'Resend secure link'}
-      </button>
-      {state === 'sent' && <span style={{ color: '#16a34a' }}>Sent ✔</span>}
-      {state === 'error' && <span style={{ color: '#ef4444' }}>Failed to send. Try again.</span>}
+    <div style={{ marginTop: 12 }}>
+      <label style={{ display: 'block', marginBottom: 8 }}>
+        Enter your email to resend the secure settings link:
+      </label>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.currentTarget.value)}
+          placeholder="you@example.com"
+          style={{ padding: 8, border: '1px solid #d1d5db', borderRadius: 8, minWidth: 260 }}
+        />
+        <button
+          onClick={send}
+          disabled={!email || status === 'sending'}
+          style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 12, background: '#fff' }}
+        >
+          {status === 'sending' ? 'Sending…' : 'Resend secure link'}
+        </button>
+      </div>
+      {message && (
+        <p style={{ marginTop: 8, color: status === 'error' ? '#ef4444' : '#16a34a' }}>
+          {message}
+        </p>
+      )}
     </div>
   );
 }
 
-export default async function LegacySettings({ params }: { params: { agentId: string } }) {
-  const supabaseAdmin = getAdmin();
-  if (!supabaseAdmin) {
-    return (
-      <div style={{ padding: 24, maxWidth: 720, margin: '0 auto' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Configuration error</h1>
-        <p style={{ color: '#555' }}>
-          Missing <code>SUPABASE_URL</code> and/or <code>SUPABASE_SERVICE_ROLE_KEY</code>.  
-          Add them in Vercel → Project → Settings → Environment Variables (Production), then redeploy.
-        </p>
-      </div>
-    );
-  }
-
-  const agentId = params.agentId;
-  const { data: agent } = await supabaseAdmin
-    .from('agents')
-    .select('id, email')
-    .eq('id', agentId)
-    .maybeSingle();
-
+export default function MovedSettingsPage() {
   return (
     <div style={{ padding: 24, maxWidth: 720, margin: '0 auto' }}>
       <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>This settings page has moved</h1>
-
-      {!agent ? (
-        <p style={{ color: '#555' }}>
-          The link you opened is no longer used. Please request your secure settings link by email.
-        </p>
-      ) : (
-        <>
-          <p style={{ color: '#555' }}>
-            We’ve switched to password-less access. We just emailed your secure settings link to{' '}
-            <strong>{maskEmail(agent.email)}</strong>. Open that email to manage your account.
-          </p>
-          <Resend email={agent.email} />
-          <p style={{ color: '#777', marginTop: 12, fontSize: 13 }}>
-            Tip: bookmark the settings link in that email for future use.
-          </p>
-        </>
-      )}
+      <p style={{ color: '#555' }}>
+        We now use password-less access. Use the form below to have your secure settings link emailed to you.
+      </p>
+      <ResendForm />
+      <p style={{ color: '#777', marginTop: 12, fontSize: 13 }}>
+        Tip: once you open the email, bookmark the settings link for next time.
+      </p>
     </div>
   );
 }
