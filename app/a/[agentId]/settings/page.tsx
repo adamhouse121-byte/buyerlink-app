@@ -1,8 +1,18 @@
+// app/a/[agentId]/settings/page.tsx
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// IMPORTANT: this page must run server-side only
+import 'server-only';
 import * as React from 'react';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { createClient } from '@supabase/supabase-js';
+
+// Create a server-side Supabase client using service role key
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL as string,
+  process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+  { auth: { persistSession: false } }
+);
 
 function maskEmail(e: string) {
   const [u, d] = e.split('@');
@@ -26,6 +36,7 @@ function Resend({ email }: { email: string }) {
         if (!cancelled) setState('error');
       }
     };
+    // send once on load
     send();
     return () => { cancelled = true; };
   }, [email]);
@@ -54,7 +65,9 @@ function Resend({ email }: { email: string }) {
 
 export default async function LegacySettings({ params }: { params: { agentId: string } }) {
   const agentId = params.agentId;
-  const { data: agent } = await supabaseAdmin
+
+  // Look up agent by ID to get their email
+  const { data: agent, error } = await supabaseAdmin
     .from('agents')
     .select('id, email')
     .eq('id', agentId)
@@ -64,7 +77,7 @@ export default async function LegacySettings({ params }: { params: { agentId: st
     <div style={{ padding: 24, maxWidth: 720, margin: '0 auto' }}>
       <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>This settings page has moved</h1>
 
-      {!agent ? (
+      {!agent || error ? (
         <p style={{ color: '#555' }}>
           The link you opened is no longer used. Please request your secure settings link by email.
         </p>
